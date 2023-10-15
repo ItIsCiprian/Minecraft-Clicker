@@ -4,51 +4,45 @@ const resourcesElement = document.getElementById("resources");
 const mineButton = document.getElementById("mineButton");
 const upgradeButton = document.getElementById("upgradeButton");
 
+// Constants
+const UPGRADE_COST = 10;
+
 // Game state
 let blocksMined = 0;
 let resources = 0;
 let toolLevel = 1;
 
-// Update blocks mined and resources count on the webpage
+// Function to update the UI
 function updateUI() {
     blocksMinedElement.textContent = blocksMined;
     resourcesElement.textContent = resources;
-    upgradeButton.textContent = `Upgrade Tool (Cost: ${toolLevel * 10} resources)`;
+    upgradeButton.textContent = `Upgrade Tool (Cost: ${toolLevel * UPGRADE_COST} resources)`;
 }
 
-// Event listener for the mine button
+// Event listener for mining
 mineButton.addEventListener("click", () => {
-    // Increase blocks mined
     blocksMined++;
-
-    // Collect resources based on tool level
     resources += toolLevel;
-
-    // Update the UI
     updateUI();
 });
 
-// Event listener for the upgrade button
+// Event listener for upgrading
 upgradeButton.addEventListener("click", () => {
-    const upgradeCost = toolLevel * 10;
-
-    // Check if player has enough resources to upgrade
+    const upgradeCost = toolLevel * UPGRADE_COST;
+    
     if (resources >= upgradeCost) {
-        // Deduct resources and increase tool level
         resources -= upgradeCost;
         toolLevel++;
-
-        // Update the UI
         updateUI();
+        console.log(`Tool upgraded to level ${toolLevel}`);
+    } else {
+        console.log("Not enough resources to upgrade the tool.");
     }
 });
 
 // Game loop (updates every second)
 setInterval(() => {
-    // Automatically mine blocks based on tool level
     resources += toolLevel;
-
-    // Update the UI
     updateUI();
 }, 1000);
 
