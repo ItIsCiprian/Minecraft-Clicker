@@ -1,56 +1,62 @@
-// Get DOM elements
-const blocksMinedElement = document.getElementById("blocksMined");
-const resourcesElement = document.getElementById("resources");
-const mineButton = document.getElementById("mineButton");
-const upgradeButton = document.getElementById("upgradeButton");
-const craftButton = document.getElementById("craftButton");
-const craftedItemsElement = document.getElementById("craftedItems");
+// Initial setup: Grabbing HTML elements to interact with the game UI
+const elements = {
+    blocksMined: document.getElementById("blocksMined"),
+    resources: document.getElementById("resources"),
+    mineButton: document.getElementById("mineButton"),
+    upgradeButton: document.getElementById("upgradeButton"),
+    craftButton: document.getElementById("craftButton"),
+    craftedItems: document.getElementById("craftedItems")
+};
 
-// Constants
-const UPGRADE_COST = 10;
-const CRAFT_COST = 50; // Cost for crafting an item
+// Game constants: Define costs and rates for game actions
+const GAME_CONSTANTS = {
+    UPGRADE_COST: 10, // Base cost to upgrade tools
+    CRAFT_COST: 50 // Cost to craft an item
+};
 
-// Game state
-let blocksMined = 0;
-let resources = 0;
-let toolLevel = 1;
-let craftedItems = 0; // Number of crafted items
+// Game state: Track game statistics and player progression
+let gameState = {
+    blocksMined: 0,
+    resources: 0,
+    toolLevel: 1,
+    craftedItems: 0
+};
 
-// Function to update the UI
+// Function to update the game UI based on the current state
 function updateUI() {
-    blocksMinedElement.textContent = blocksMined;
-    resourcesElement.textContent = resources;
-    upgradeButton.textContent = `Upgrade Tool (Cost: ${toolLevel * UPGRADE_COST} resources)`;
-    craftButton.textContent = `Craft Item (Cost: ${CRAFT_COST} resources)`;
-    craftedItemsElement.textContent = craftedItems;
+    elements.blocksMined.textContent = gameState.blocksMined;
+    elements.resources.textContent = gameState.resources;
+    elements.upgradeButton.textContent = `Upgrade Tool (Cost: ${gameState.toolLevel * GAME_CONSTANTS.UPGRADE_COST} resources)`;
+    elements.craftButton.textContent = `Craft Item (Cost: ${GAME_CONSTANTS.CRAFT_COST} resources)`;
+    elements.craftedItems.textContent = gameState.craftedItems;
 }
 
-// Event listener for mining
-mineButton.addEventListener("click", () => {
-    blocksMined++;
-    resources += toolLevel;
+// Adds functionality to the mine button for mining resources
+elements.mineButton.addEventListener("click", () => {
+    gameState.blocksMined++;
+    gameState.resources += gameState.toolLevel;
     updateUI();
 });
 
-// Event listener for upgrading
-upgradeButton.addEventListener("click", () => {
-    const upgradeCost = toolLevel * UPGRADE_COST;
+// Adds functionality to the upgrade button for upgrading tools
+elements.upgradeButton.addEventListener("click", () => {
+    const upgradeCost = gameState.toolLevel * GAME_CONSTANTS.UPGRADE_COST;
     
-    if (resources >= upgradeCost) {
-        resources -= upgradeCost;
-        toolLevel++;
+    if (gameState.resources >= upgradeCost) {
+        gameState.resources -= upgradeCost;
+        gameState.toolLevel++;
         updateUI();
-        console.log(`Tool upgraded to level ${toolLevel}`);
+        console.log(`Tool upgraded to level ${gameState.toolLevel}`);
     } else {
         console.log("Not enough resources to upgrade the tool.");
     }
 });
 
-// Event listener for crafting
-craftButton.addEventListener("click", () => {
-    if (resources >= CRAFT_COST) {
-        resources -= CRAFT_COST;
-        craftedItems++;
+// Adds functionality to the craft button for crafting items
+elements.craftButton.addEventListener("click", () => {
+    if (gameState.resources >= GAME_CONSTANTS.CRAFT_COST) {
+        gameState.resources -= GAME_CONSTANTS.CRAFT_COST;
+        gameState.craftedItems++;
         updateUI();
         console.log("Crafted an item!");
     } else {
@@ -58,11 +64,11 @@ craftButton.addEventListener("click", () => {
     }
 });
 
-// Game loop (updates every second)
+// Game loop to increment resources over time
 setInterval(() => {
-    resources += toolLevel;
+    gameState.resources += gameState.toolLevel;
     updateUI();
 }, 1000);
 
-// Initialize the game by updating the UI
+// Initializes the game by updating the UI initially
 updateUI();
