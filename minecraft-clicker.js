@@ -11,7 +11,7 @@ const UIElements = {
 // Constants used in the game for various costs and rates.
 const GAME_CONSTANTS = {
     UPGRADE_COST: 10, // Base cost for upgrading tools, multiplied by the tool level.
-    CRAFT_COST: 50   // Cost to craft one item.
+    CRAFT_COST: 50    // Cost to craft one item.
 };
 
 // Object to track the state of the game including resources and item counts.
@@ -31,15 +31,15 @@ function updateUI() {
     UIElements.craftedItems.textContent = gameState.craftedItems;
 }
 
-// Event listener for the mine button to mine blocks and gather resources.
-UIElements.mineButton.addEventListener("click", function handleMine() {
+// Handles mining action: increments blocks mined and resources based on tool level.
+function handleMine() {
     gameState.blocksMined++;
-    gameState.resources += gameState.toolLevel; // Increment resources by tool level
+    gameState.resources += gameState.toolLevel; // Increment resources by tool level.
     updateUI();
-});
+}
 
-// Event listener for the upgrade button to upgrade the mining tool.
-UIElements.upgradeButton.addEventListener("click", function handleUpgrade() {
+// Handles upgrading the tool: checks resource availability and upgrades the tool if possible.
+function handleUpgrade() {
     const upgradeCost = gameState.toolLevel * GAME_CONSTANTS.UPGRADE_COST;
 
     if (gameState.resources >= upgradeCost) {
@@ -50,10 +50,10 @@ UIElements.upgradeButton.addEventListener("click", function handleUpgrade() {
     } else {
         console.log("Not enough resources to upgrade the tool.");
     }
-});
+}
 
-// Event listener for the craft button to craft new items.
-UIElements.craftButton.addEventListener("click", function handleCraft() {
+// Handles crafting items: checks resource availability and crafts an item if possible.
+function handleCraft() {
     if (gameState.resources >= GAME_CONSTANTS.CRAFT_COST) {
         gameState.resources -= GAME_CONSTANTS.CRAFT_COST;
         gameState.craftedItems++;
@@ -62,7 +62,12 @@ UIElements.craftButton.addEventListener("click", function handleCraft() {
     } else {
         console.log("Not enough resources to craft an item.");
     }
-});
+}
+
+// Event listeners for button actions.
+UIElements.mineButton.addEventListener("click", handleMine);
+UIElements.upgradeButton.addEventListener("click", handleUpgrade);
+UIElements.craftButton.addEventListener("click", handleCraft);
 
 // Periodically updates game resources automatically every second.
 setInterval(() => {
