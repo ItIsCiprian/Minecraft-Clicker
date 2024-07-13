@@ -64,16 +64,27 @@ function handleCraft() {
     }
 }
 
-// Event listeners for button actions.
-UIElements.mineButton.addEventListener("click", handleMine);
-UIElements.upgradeButton.addEventListener("click", handleUpgrade);
-UIElements.craftButton.addEventListener("click", handleCraft);
+// Initialize event listeners for button actions.
+function initializeEventListeners() {
+    UIElements.mineButton.addEventListener("click", handleMine);
+    UIElements.upgradeButton.addEventListener("click", handleUpgrade);
+    UIElements.craftButton.addEventListener("click", handleCraft);
+}
 
 // Periodically updates game resources automatically every second.
-setInterval(() => {
-    gameState.resources += gameState.toolLevel;
-    updateUI();
-}, 1000);
+function autoUpdateResources() {
+    setInterval(() => {
+        gameState.resources += gameState.toolLevel;
+        updateUI();
+    }, 1000);
+}
 
-// Initial UI update to display the starting state of the game.
-updateUI();
+// Initialize the game by setting up event listeners and updating the UI.
+function initializeGame() {
+    initializeEventListeners();
+    autoUpdateResources();
+    updateUI();
+}
+
+// Start the game initialization.
+initializeGame();
