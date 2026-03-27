@@ -1,183 +1,219 @@
-// Selectors for accessing HTML elements related to the game interface.
-const UIElements = {
-    blocksMined: document.getElementById("blocksMined"),
-    resources: document.getElementById("resources"),
-    mineButton: document.getElementById("mineButton"),
-    upgradeButton: document.getElementById("upgradeButton"),
-    craftButton: document.getElementById("craftButton"),
-    craftedItems: document.getElementById("craftedItems"),
-    achievements: document.getElementById("achievements"),
-    saveButton: document.getElementById("saveButton"),
-    loadButton: document.getElementById("loadButton"),
-    resetButton: document.getElementById("resetButton"),
-    messageBox: document.getElementById("messageBox"), // New element for displaying messages
-    tooltipContainer: document.getElementById("tooltipContainer") // New element for tooltips
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const UPGRADE_COST_PER_LEVEL = 10;
+const CRAFT_COST = 50;
+const AUTO_MINE_INTERVAL_MS = 1000;
+const ANIMATION_DURATION_MS = 300;
+const MESSAGE_DURATION_MS = 3000;
+
+const TOOLTIPS = {
+  mineButton:    "Mine blocks to collect resources.",
+  upgradeButton: "Upgrade your mining tool to collect more resources per mine.",
+  craftButton:   "Craft items to progress and unlock achievements.",
 };
 
-// Constants used in the game for various costs and rates.
-const GAME_CONSTANTS = {
-    UPGRADE_COST: 10, // Base cost for upgrading tools, multiplied by the tool level.
-    CRAFT_COST: 50,   // Cost to craft one item.
-    AUTO_MINE_INTERVAL: 1000, // Interval for automatic resource generation in milliseconds.
-    ANIMATION_DURATION: 300 // Duration for UI animations
+// ─── State ────────────────────────────────────────────────────────────────────
+
+const defaultState = () => ({
+  blocksMined:  0,
+  resources:    0,
+  toolLevel:    1,
+  craftedItems: 0,
+  achievements: [],
+});
+
+let state = defaultState();
+
+// ─── DOM ──────────────────────────────────────────────────────────────────────
+
+const el = (id) => document.getElementById(id);
+
+const ui = {
+  blocksMined:      el("blocksMined"),
+  resources:        el("resources"),
+  craftedItems:     el("craftedItems"),
+  achievements:     el("achievements"),
+  mineButton:       el("mineButton"),
+  upgradeButton:    el("upgradeButton"),
+  craftButton:      el("craftButton"),
+  saveButton:       el("saveButton"),
+  loadButton:       el("loadButton"),
+  resetButton:      el("resetButton"),
+  messageBox:       el("messageBox"),
+  tooltipContainer: el("tooltipContainer"),
 };
 
-// Object to track the state of the game including resources and item counts.
-let gameState = {
-    blocksMined: 0,
-    resources: 0,
-    toolLevel: 1,
-    craftedItems: 0,
-    achievements: [],
-    lastAction: null
-};
+// ─── UI Rendering ─────────────────────────────────────────────────────────────
 
-// Improved UI update function with more dynamic interactions
-function updateUI() {
-    // Update text content
-    UIElements.blocksMined.textContent = gameState.blocksMined;
-    UIElements.resources.textContent = gameState.resources;
-    UIElements.craftedItems.textContent = gameState.craftedItems;
-    UIElements.achievements.textContent = gameState.achievements.join(", ");
+function render() {
+  const upgradeCost = state.toolLevel * UPGRADE_COST_PER_LEVEL;
 
-    // Update upgrade and craft button states and tooltips
-    const upgradeCost = gameState.toolLevel * GAME_CONSTANTS.UPGRADE_COST;
-    const craftCost = GAME_CONSTANTS.CRAFT_COST;
+  ui.blocksMined.textContent  = state.blocksMined;
+  ui.resources.textContent    = state.resources;
+  ui.craftedItems.textContent = state.craftedItems;
+  ui.achievements.textContent = state.achievements.join(", ") || "None";
 
-    // Upgrade button interaction
-    UIElements.upgradeButton.textContent = `Upgrade Tool (Cost: ${upgradeCost} resources)`;
-    UIElements.upgradeButton.disabled = gameState.resources < upgradeCost;
-    UIElements.upgradeButton.classList.toggle('disabled', gameState.resources < upgradeCost);
-
-    // Craft button interaction
-    UIElements.craftButton.textContent = `Craft Item (Cost: ${craftCost} resources)`;
-    UIElements.craftButton.disabled = gameState.resources < craftCost;
-    UIElements.craftButton.classList.toggle('disabled', gameState.resources < craftCost);
-
-    // Animate last action
-    animateLastAction();
+  setButtonState(ui.upgradeButton, `Upgrade Tool (Cost: ${upgradeCost})`, state.resources < upgradeCost);
+  setButtonState(ui.craftButton,   `Craft Item (Cost: ${CRAFT_COST})`,    state.resources < CRAFT_COST);
 }
 
-// Add visual feedback for actions
-function animateLastAction() {
-    if (!gameState.lastAction) return;
+function setButtonState(button, label, disabled) {
+  button.textContent = label;
+  button.disabled    = disabled;
+  button.classList.toggle("disabled", disabled);
+}
 
-    const element = UIElements[gameState.lastAction];
-    if (element) {
-        element.classList.add('action-pulse');
-        setTimeout(() => {
-            element.classList.remove('action-pulse');
-        }, GAME_CONSTANTS.ANIMATION_DURATION);
+// ─── Feedback ─────────────────────────────────────────────────────────────────
+
+let messageTimer = null;
+
+function showMessage(text, type = "info") {
+  if (!ui.messageBox) return;
+  clearTimeout(messageTimer);
+  ui.messageBox.textContent  = text;
+  ui.messageBox.className    = `message ${type}`;
+  messageTimer = setTimeout(() => {
+    ui.messageBox.textContent = "";
+    ui.messageBox.className   = "";
+  }, MESSAGE_DURATION_MS);
+}
+
+function pulse(buttonKey) {
+  const button = ui[buttonKey];
+  if (!button) return;
+  button.classList.add("action-pulse");
+  setTimeout(() => button.classList.remove("action-pulse"), ANIMATION_DURATION_MS);
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+
+function mine() {
+  state.blocksMined++;
+  state.resources += state.toolLevel;
+  showMessage(`Mined ${state.toolLevel} resource${state.toolLevel > 1 ? "s" : ""}!`, "success");
+  pulse("mineButton");
+  checkAchievements();
+  render();
+}
+
+function upgrade() {
+  const cost = state.toolLevel * UPGRADE_COST_PER_LEVEL;
+  if (state.resources < cost) {
+    showMessage("Not enough resources to upgrade.", "error");
+    return;
+  }
+  state.resources -= cost;
+  state.toolLevel++;
+  showMessage(`Tool upgraded to level ${state.toolLevel}!`, "success");
+  pulse("upgradeButton");
+  checkAchievements();
+  render();
+}
+
+function craft() {
+  if (state.resources < CRAFT_COST) {
+    showMessage("Not enough resources to craft an item.", "error");
+    return;
+  }
+  state.resources -= CRAFT_COST;
+  state.craftedItems++;
+  showMessage("Crafted an item successfully!", "success");
+  pulse("craftButton");
+  checkAchievements();
+  render();
+}
+
+// ─── Achievements ─────────────────────────────────────────────────────────────
+
+const ACHIEVEMENT_RULES = [
+  { id: "First Blood",    check: (s) => s.blocksMined  >= 1   },
+  { id: "Century Miner", check: (s) => s.blocksMined  >= 100 },
+  { id: "Master Crafter",check: (s) => s.craftedItems >= 10  },
+  { id: "Tool Master",   check: (s) => s.toolLevel    >= 5   },
+];
+
+function checkAchievements() {
+  ACHIEVEMENT_RULES.forEach(({ id, check }) => {
+    if (!state.achievements.includes(id) && check(state)) {
+      state.achievements.push(id);
+      showMessage(`Achievement unlocked: ${id}!`, "achievement");
     }
+  });
 }
 
-// Display interactive messages with fade effects
-function showMessage(message, type = 'info') {
-    if (!UIElements.messageBox) return;
+// ─── Persistence ──────────────────────────────────────────────────────────────
 
-    UIElements.messageBox.textContent = message;
-    UIElements.messageBox.className = `message ${type}`;
-    
-    // Automatically clear message after 3 seconds
-    setTimeout(() => {
-        UIElements.messageBox.textContent = '';
-        UIElements.messageBox.className = '';
-    }, 3000);
+const SAVE_KEY = "miningGameState";
+
+function saveGame() {
+  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  showMessage("Game saved.", "info");
 }
 
-// Enhanced mining function with more interactive feedback
-function handleMine() {
-    gameState.blocksMined++;
-    gameState.resources += gameState.toolLevel;
-    gameState.lastAction = 'mineButton';
-    
-    // Add visual mining feedback
-    showMessage(`Mined ${gameState.toolLevel} resources!`, 'success');
-    
-    checkAchievements();
-    updateUI();
+function loadGame() {
+  const saved = localStorage.getItem(SAVE_KEY);
+  if (!saved) return;
+  try {
+    state = { ...defaultState(), ...JSON.parse(saved) };
+    showMessage("Game loaded.", "info");
+  } catch {
+    showMessage("Failed to load save data.", "error");
+  }
 }
 
-// Enhanced upgrade function with more detailed feedback
-function handleUpgrade() {
-    const upgradeCost = gameState.toolLevel * GAME_CONSTANTS.UPGRADE_COST;
-
-    if (gameState.resources >= upgradeCost) {
-        gameState.resources -= upgradeCost;
-        gameState.toolLevel++;
-        gameState.lastAction = 'upgradeButton';
-        
-        showMessage(`Tool upgraded to level ${gameState.toolLevel}!`, 'success');
-        
-        checkAchievements();
-        updateUI();
-    } else {
-        showMessage("Not enough resources to upgrade the tool.", 'error');
-    }
+function resetGame() {
+  if (!confirm("Reset all progress?")) return;
+  localStorage.removeItem(SAVE_KEY);
+  state = defaultState();
+  showMessage("Game reset.", "info");
+  render();
 }
 
-// Enhanced crafting function with more interactive feedback
-function handleCraft() {
-    if (gameState.resources >= GAME_CONSTANTS.CRAFT_COST) {
-        gameState.resources -= GAME_CONSTANTS.CRAFT_COST;
-        gameState.craftedItems++;
-        gameState.lastAction = 'craftButton';
-        
-        showMessage("Crafted an item successfully!", 'success');
-        
-        checkAchievements();
-        updateUI();
-    } else {
-        showMessage("Not enough resources to craft an item.", 'error');
-    }
+// ─── Auto-mining ──────────────────────────────────────────────────────────────
+
+function startAutoMine() {
+  setInterval(() => {
+    state.resources += state.toolLevel;
+    render();
+  }, AUTO_MINE_INTERVAL_MS);
 }
 
-// Add hover tooltips to provide additional information
-function initializeTooltips() {
-    const tooltipElements = [
-        { element: UIElements.upgradeButton, text: "Upgrade your mining tool to collect more resources per mine" },
-        { element: UIElements.craftButton, text: "Craft items to progress and unlock achievements" },
-        { element: UIElements.mineButton, text: "Mine blocks to collect resources" }
-    ];
+// ─── Tooltips ─────────────────────────────────────────────────────────────────
 
-    tooltipElements.forEach(({ element, text }) => {
-        element.addEventListener('mouseenter', (e) => {
-            if (!UIElements.tooltipContainer) return;
-            UIElements.tooltipContainer.textContent = text;
-            UIElements.tooltipContainer.style.display = 'block';
-            UIElements.tooltipContainer.style.left = `${e.pageX + 10}px`;
-            UIElements.tooltipContainer.style.top = `${e.pageY + 10}px`;
-        });
+function initTooltips() {
+  if (!ui.tooltipContainer) return;
 
-        element.addEventListener('mouseleave', () => {
-            if (!UIElements.tooltipContainer) return;
-            UIElements.tooltipContainer.style.display = 'none';
-        });
+  Object.entries(TOOLTIPS).forEach(([key, text]) => {
+    const button = ui[key];
+    if (!button) return;
+
+    button.addEventListener("mouseenter", (e) => {
+      ui.tooltipContainer.textContent    = text;
+      ui.tooltipContainer.style.display  = "block";
+      ui.tooltipContainer.style.left     = `${e.pageX + 12}px`;
+      ui.tooltipContainer.style.top      = `${e.pageY + 12}px`;
     });
+
+    button.addEventListener("mouseleave", () => {
+      ui.tooltipContainer.style.display = "none";
+    });
+  });
 }
 
-// Existing functions like saveGame, loadGame, resetGame, checkAchievements remain the same
+// ─── Init ─────────────────────────────────────────────────────────────────────
 
-// Initialize event listeners for button actions
-function initializeEventListeners() {
-    UIElements.mineButton.addEventListener("click", handleMine);
-    UIElements.upgradeButton.addEventListener("click", handleUpgrade);
-    UIElements.craftButton.addEventListener("click", handleCraft);
-    UIElements.saveButton.addEventListener("click", saveGame);
-    UIElements.loadButton.addEventListener("click", loadGame);
-    UIElements.resetButton.addEventListener("click", resetGame);
+function init() {
+  ui.mineButton.addEventListener("click",    mine);
+  ui.upgradeButton.addEventListener("click", upgrade);
+  ui.craftButton.addEventListener("click",   craft);
+  ui.saveButton.addEventListener("click",    saveGame);
+  ui.loadButton.addEventListener("click",    loadGame);
+  ui.resetButton.addEventListener("click",   resetGame);
 
-    // Add tooltips
-    initializeTooltips();
+  initTooltips();
+  loadGame();
+  startAutoMine();
+  render();
 }
 
-// Initialize the game by setting up event listeners and updating the UI
-function initializeGame() {
-    initializeEventListeners();
-    autoUpdateResources();
-    loadGame(); // Attempt to load game state on initialization
-    updateUI();
-}
-
-// Start the game initialization
-initializeGame();
+init();
